@@ -5,7 +5,9 @@
 ```md
 # Kasirq
 
-Kasirq adalah aplikasi kasir berbasis **Flutter** yang dirancang untuk membantu usaha kecil maupun menengah dalam mengelola transaksi penjualan, menu, laporan, dan struk secara digital.
+Kasirq adalah aplikasi kasir berbasis **Flutter** yang dirancang untuk 
+membantu usaha kecil maupun menengah dalam mengelola transaksi penjualan,
+menu, laporan, dan struk secara digital.
 
 ## ✨ Fitur Utama
 
