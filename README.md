@@ -1,16 +1,67 @@
 # kasirq
 
-A new Flutter project.
 
-## Getting Started
 
-This project is a starting point for a Flutter application.
+```md
+# Kasirq
 
-A few resources to get you started if this is your first Flutter project:
+Kasirq adalah aplikasi kasir berbasis **Flutter** yang dirancang untuk membantu usaha kecil maupun menengah dalam mengelola transaksi penjualan, menu, laporan, dan struk secara digital.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## ✨ Fitur Utama
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Manajemen menu dan harga  
+- Keranjang belanja (cart) dengan update jumlah item  
+- Pencatatan pesanan dan checkout  
+- Cetak/preview struk  
+- Laporan harian  
+- Tema dan pengaturan dasar  
+
+## 📂 Struktur Proyek
+
+```.
+lib/
+├── core/              # Koneksi database / helper
+├── data/              # Model data (menu, order, cart)
+├── providers/         # State management (Provider)
+├── presentation/      # UI (pages, widgets, services)
+└── main.dart          # Entry point aplikasi
+```.
+
+## 🚀 Getting Started
+
+### Prasyarat
+
+- [Flutter SDK](https://flutter.dev/docs/get-started/install)
+- [Dart](https://dart.dev/get-dart)
+- Editor seperti [VS Code](https://code.visualstudio.com/) atau Android Studio
+
+```
+### Instalasi
+
+1. Clone repository:
+   ```bash
+   git clone https://github.com/morvn/kasirq.git
+   cd kasirq
+   ```
+
+2. Install dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+3. Jalankan aplikasi di emulator atau perangkat:
+   ```bash
+   flutter run
+   ```
+
+## 📖 Dokumentasi
+
+Beberapa referensi untuk membantu pengembangan:
+
+- [Flutter Docs](https://docs.flutter.dev/)
+- [Flutter Cookbook](https://docs.flutter.dev/cookbook)
+- [Provider State Management](https://pub.dev/packages/provider)
+
+## 📝 Status
+
+Proyek ini masih dalam tahap pengembangan awal.
