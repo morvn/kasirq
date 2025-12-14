@@ -7,87 +7,125 @@ class DummySeeder {
 
   DummySeeder(this.db);
 
+  static const List<Map<String, dynamic>> baseMenuData = [
+    // Coffee
+    {'name': 'Espresso', 'price': 15000, 'category': 'Kopi'},
+    {'name': 'Americano', 'price': 18000, 'category': 'Kopi'},
+    {'name': 'Cappuccino', 'price': 23000, 'category': 'Kopi'},
+    {'name': 'Caffe Latte', 'price': 25000, 'category': 'Kopi'},
+    {'name': 'Caramel Latte', 'price': 28000, 'category': 'Kopi'},
+    {'name': 'Mocha', 'price': 28000, 'category': 'Kopi'},
+    {'name': 'Vanilla Latte', 'price': 27000, 'category': 'Kopi'},
+    // Non-Coffee
+    {'name': 'Chocolate', 'price': 22000, 'category': 'Non Kopi'},
+    {'name': 'Matcha Latte', 'price': 26000, 'category': 'Non Kopi'},
+    {'name': 'Taro Latte', 'price': 24000, 'category': 'Non Kopi'},
+    {'name': 'Red Velvet', 'price': 25000, 'category': 'Non Kopi'},
+    {'name': 'Lemon Tea', 'price': 15000, 'category': 'Non Kopi'},
+    {'name': 'Lychee Tea', 'price': 18000, 'category': 'Non Kopi'},
+    // Pastry & Food
+    {'name': 'Croissant Butter', 'price': 17000, 'category': 'Makanan Ringan'},
+    {'name': 'Chocolate Croissant', 'price': 20000, 'category': 'Makanan Ringan'},
+    {'name': 'Classic Donut', 'price': 8000, 'category': 'Makanan Ringan'},
+    {'name': 'Tuna Sandwich', 'price': 22000, 'category': 'Makanan Ringan'},
+    {'name': 'Chicken Sandwich', 'price': 23000, 'category': 'Makanan Ringan'},
+    {'name': 'French Fries', 'price': 15000, 'category': 'Makanan Ringan'},
+    {'name': 'Mini Churros', 'price': 18000, 'category': 'Makanan Ringan'},
+  ];
+
+  static List<String> get baseMenuNames =>
+      baseMenuData.map((e) => e['name'] as String).toList();
+
   Future<void> seed({int days = 7}) async {
     final database = await db.database;
 
-    // ── Fase 1: pastikan menu tersedia (transaksional, cepat, tanpa panggil helper lain)
     final menusReady = <MenuModel>[];
+    await db.upsertCategories(
+      baseMenuData
+          .map((e) => e['category'] as String? ?? '')
+          .where((c) => c.isNotEmpty),
+    );
     await database.transaction((txn) async {
-      final baseMenus = <MenuModel>[
-        MenuModel(name: 'Mie Ayam', price: 10000, imagePath: ''),
-        MenuModel(name: 'Mie Ayam Pangsit', price: 12000, imagePath: ''),
-        MenuModel(name: 'Mie Ayam Bakso', price: 15000, imagePath: ''),
-        MenuModel(name: 'Mie Ayam Ceker', price: 15000, imagePath: ''),
-        MenuModel(name: 'Bakso', price: 11000, imagePath: ''),
-        MenuModel(name: 'Bakso Ceker', price: 15000, imagePath: ''),
-        MenuModel(name: 'Bakso Goreng', price: 13000, imagePath: ''),
-        MenuModel(name: 'Es Teh', price: 5000, imagePath: ''),
-        MenuModel(name: 'Es Jeruk', price: 5000, imagePath: ''),
-        MenuModel(name: 'Kerupuk', price: 1000, imagePath: ''),
-      ];
+      final baseMenus = baseMenuData
+          .map(
+            (e) => MenuModel(
+              name: e['name'] as String,
+              price: (e['price'] as num).toInt(),
+              imagePath: '',
+              category: e['category'] as String?,
+            ),
+          )
+          .toList();
 
       final existingRows = await txn.query(
         'menus',
-        columns: ['id', 'name', 'price'],
+        columns: ['id', 'name', 'price', 'category'],
       );
+
       final existingByName = {
-        for (final r in existingRows) (r['name'] as String).trim(): r
+        for (final r in existingRows) (r['name'] as String).trim(): r,
       };
 
       for (final m in baseMenus) {
         final key = m.name.trim();
         if (existingByName.containsKey(key)) {
           final row = existingByName[key]!;
-          menusReady.add(MenuModel(
-            id: row['id'] as int?,
-            name: row['name'] as String,
-            price: (row['price'] as num).toInt(),
-            imagePath: '',
-          ));
+          menusReady.add(
+            MenuModel(
+              id: row['id'] as int?,
+              name: row['name'] as String,
+              price: (row['price'] as num).toInt(),
+              imagePath: '',
+              category: (row['category'] as String? ?? m.category)?.trim(),
+            ),
+          );
+          final currentCat = (row['category'] as String? ?? '').trim();
+          if (currentCat.isEmpty && m.category != null) {
+            await txn.update(
+              'menus',
+              {'category': m.category},
+              where: 'id = ?',
+              whereArgs: [row['id']],
+            );
+          }
         } else {
           final id = await txn.insert('menus', {
             'name': m.name,
             'price': m.price,
+            'category': m.category,
           });
-          menusReady.add(MenuModel(
-            id: id,
-            name: m.name,
-            price: m.price,
-            imagePath: '',
-          ));
+          menusReady.add(
+            MenuModel(
+              id: id,
+              name: m.name,
+              price: m.price,
+              imagePath: '',
+              category: m.category,
+            ),
+          );
         }
       }
-    }); // transaksi selesai → kunci rilis
+    });
 
-    // ── Fase 2: insert orders (di luar transaksi agar tidak konflik dengan helper)
     final now = DateTime.now();
     for (int i = 0; i < days; i++) {
       final tanggal = now.subtract(Duration(days: i));
-      final createdAtIso = tanggal.toIso8601String();
       final customer = 'Dummy $i';
 
       final items = <CartItem>[
         CartItem(
-            menu: menusReady[i % menusReady.length], quantity: 1 + (i % 2)),
-        CartItem(menu: menusReady[(i + 2) % menusReady.length], quantity: 2),
+          menu: menusReady[i % menusReady.length],
+          quantity: 1 + (i % 2),
+        ),
+        CartItem(menu: menusReady[(i + 3) % menusReady.length], quantity: 2),
       ];
 
-      // gunakan helper (boleh buka transaksi internalnya sendiri)
       await db.insertOrderWithCustomer(
         customerName: customer,
         tableNumber: '${i + 1}',
         items: items,
+        createdAt: tanggal,
       );
-
-      // backdate created_at bila kolom ada
-      try {
-        await database.rawUpdate(
-          'UPDATE orders SET created_at = ? WHERE customer_name = ?',
-          [createdAtIso, customer],
-        );
-      } catch (_) {
-        // abaikan jika schema belum punya kolom created_at
-      }
     }
   }
 }

@@ -18,7 +18,7 @@ class BottomNavbar extends StatelessWidget {
       selectedIndex: currentIndex,
       onDestinationSelected: onTap,
       backgroundColor: cs.surface,
-      indicatorColor: cs.primary.withOpacity(0.9),
+      indicatorColor: cs.primary.withValues(alpha: 0.9),
       labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
       destinations: [
         NavigationDestination(

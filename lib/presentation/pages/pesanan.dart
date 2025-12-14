@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/database/db_helper.dart';
+import '../../core/services/order_service.dart';
 
 class OrderListPage extends StatefulWidget {
   const OrderListPage({super.key});
@@ -19,7 +21,26 @@ class _OrderListPageState extends State<OrderListPage> {
   }
 
   void _loadOrders() {
-    _groupedOrders = DBHelper().getOrdersGroupedByCustomer();
+    _groupedOrders = _fetchOrders();
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>> _fetchOrders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await OrderService().pullOrdersFromCloud(userId: user.uid);
+      } catch (e) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Gagal sinkron pesanan: $e')),
+            );
+          });
+        }
+      }
+    }
+    return DBHelper().getOrdersGroupedByCustomer();
   }
 
   Future<void> _markAllDone(String customerName, String tableNo) async {
@@ -38,7 +59,7 @@ class _OrderListPageState extends State<OrderListPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),

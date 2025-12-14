@@ -1,9 +1,11 @@
 // lib/presentation/pages/checkout.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../providers/cart_provider.dart';
 import '../../core/database/db_helper.dart';
+import '../../core/services/order_service.dart';
 import 'struk.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -224,13 +226,33 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           final items = cart.items.values.toList();
 
                           try {
+                            final user = FirebaseAuth.instance.currentUser;
+                            if (user == null) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Harus login untuk menyimpan transaksi'),
+                                ),
+                              );
+                              return;
+                            }
+
                             await DBHelper().insertOrderWithCustomer(
                               customerName: name.isEmpty
                                   ? '-'
                                   : name, // default "-" jika kosong
                               tableNumber: table.isEmpty ? '-' : table,
                               items: items,
+                              userId: user.uid,
                             );
+
+                            String? syncError;
+                            try {
+                              await OrderService().syncUnsyncedOrders(
+                                userId: user.uid,
+                              );
+                            } catch (e) {
+                              syncError = e.toString();
+                            }
 
                             if (!mounted) return;
                             cart.clearCart();
@@ -244,6 +266,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 ),
                               ),
                             );
+
+                            if (syncError != null && mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Transaksi tersimpan lokal, sync cloud gagal: $syncError',
+                                  ),
+                                ),
+                              );
+                            }
                           } catch (e) {
                             if (!mounted) return;
                             messenger.showSnackBar(

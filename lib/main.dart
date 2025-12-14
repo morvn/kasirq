@@ -2,17 +2,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'presentation/pages/home_page.dart';
+import 'presentation/pages/login_page.dart';
 import 'providers/cart_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/font_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/business_profile_provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => BusinessProfileProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => FontProvider()),
@@ -22,11 +32,50 @@ void main() {
   );
 }
 
-class KasirApp extends StatelessWidget {
+class KasirApp extends StatefulWidget {
   const KasirApp({super.key});
 
   @override
+  State<KasirApp> createState() => _KasirAppState();
+}
+
+class _KasirAppState extends State<KasirApp> {
+  bool _providersConnected = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Setup providers connection setelah user login
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _connectProviders();
+    });
+  }
+
+  void _connectProviders() {
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.isAuthenticated && !_providersConnected) {
+      final businessProfileProvider = context.read<BusinessProfileProvider>();
+      final themeProvider = context.read<ThemeProvider>();
+      final fontProvider = context.read<FontProvider>();
+
+      themeProvider.setProfileProvider(businessProfileProvider);
+      fontProvider.setProfileProvider(businessProfileProvider);
+      setState(() => _providersConnected = true);
+    } else if (!authProvider.isAuthenticated) {
+      setState(() => _providersConnected = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Reconnect jika auth state berubah
+    final authProvider = context.watch<AuthProvider>();
+    if (authProvider.isAuthenticated != _providersConnected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _connectProviders();
+      });
+    }
+
     final themeMode = context.watch<ThemeProvider>().currentTheme;
     final isLargeFont = context.watch<FontProvider>().isLargeFont;
 
@@ -53,8 +102,24 @@ class KasirApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const HomePage(),
+      home: const AuthWrapper(),
     );
+  }
+}
+
+/// Widget wrapper untuk mengecek status autentikasi
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
+    if (authProvider.isAuthenticated) {
+      return const HomePage();
+    } else {
+      return const LoginPage();
+    }
   }
 }
 
@@ -94,7 +159,7 @@ ThemeData _buildDarkTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
-    cardTheme: const CardTheme(
+    cardTheme: const CardThemeData(
       color: Color.fromARGB(255, 40, 40, 40), // konsisten card di dark mode
     ),
     textTheme: const TextTheme(

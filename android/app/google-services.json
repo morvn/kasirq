@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "326024956970",
+    "project_id": "kp-kasirq",
+    "storage_bucket": "kp-kasirq.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:326024956970:android:86f6438178d2d3b26a0753",
+        "android_client_info": {
+          "package_name": "com.example.kasirq"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "326024956970-ujq5en5r2hgd25gdcrrejk1v0j1ilhud.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.kasirq",
+            "certificate_hash": "85c1c476e9e4fd9eb7e24edff8b6b59dc5ab2a5c"
+          }
+        },
+        {
+          "client_id": "326024956970-l5m55f05h92mtp4hqkqm6hvp5svdf9ba.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBy184-Fn4nAr3T8ITVizvy4NqcsoL2ywQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "326024956970-l5m55f05h92mtp4hqkqm6hvp5svdf9ba.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

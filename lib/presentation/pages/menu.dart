@@ -1,9 +1,12 @@
 // lib/presentation/pages/menu.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/database/db_helper.dart';
 import '../../data/models/menu_model.dart';
+import '../../core/services/menu_service.dart';
+import '../widgets/category_manager_sheet.dart';
 import 'tambah_menu.dart';
 
 class MenuListPage extends StatefulWidget {
@@ -23,11 +26,21 @@ class _MenuListPageState extends State<MenuListPage> {
   }
 
   Future<void> _loadMenus() async {
-    final data = await DBHelper().getMenus();
-    if (!mounted) return;
-    setState(() {
-      _menus = data;
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    try {
+      final data = user != null
+          ? await MenuService().syncMenus(userId: user.uid)
+          : await DBHelper().getMenus();
+      if (!mounted) return;
+      setState(() => _menus = data);
+    } catch (e) {
+      if (!mounted) return;
+      final data = await DBHelper().getMenus();
+      setState(() => _menus = data);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat menu: $e')),
+      );
+    }
   }
 
   Future<void> _goToAddMenu() async {
@@ -49,7 +62,14 @@ class _MenuListPageState extends State<MenuListPage> {
     }
   }
 
-  void _confirmDelete(int id) {
+  Future<void> _openCategoryManager() async {
+    final user = FirebaseAuth.instance.currentUser;
+    await CategoryManagerSheet.show(context, userId: user?.uid);
+    if (!mounted) return;
+    await _loadMenus();
+  }
+
+  void _confirmDelete(MenuModel menu) {
     final parentCtx = context;
 
     showDialog(
@@ -71,7 +91,10 @@ class _MenuListPageState extends State<MenuListPage> {
               nav.pop();
 
               try {
-                await DBHelper().deleteMenu(id);
+                if (menu.cloudId != null) {
+                  await MenuService().deleteMenu(menu.cloudId!);
+                }
+                await DBHelper().deleteMenu(menu.id!);
 
                 if (!mounted) return;
                 await _loadMenus();
@@ -110,6 +133,11 @@ class _MenuListPageState extends State<MenuListPage> {
       appBar: AppBar(
         title: const Text("Daftar Menu"),
         actions: [
+          IconButton(
+            tooltip: 'Kelola kategori',
+            onPressed: _openCategoryManager,
+            icon: const Icon(Icons.category),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton.icon(
@@ -136,37 +164,62 @@ class _MenuListPageState extends State<MenuListPage> {
                 ],
               ),
             )
-          : ListView.builder(
-              itemCount: _menus.length,
-              itemBuilder: (context, index) {
-                final menu = _menus[index];
-                return Card(
-                  child: ListTile(
-                    onTap: () => _editMenu(menu),
-                    leading: menu.imagePath != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(menu.imagePath!),
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.fastfood),
-                            ),
-                          )
-                        : const Icon(Icons.fastfood),
-                    title: Text(menu.name),
-                    subtitle: Text("Rp${menu.price}"),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _confirmDelete(menu.id!),
-                    ),
-                  ),
-                );
-              },
+          : ListView(
+              children: _buildGroupedMenus(),
             ),
       // FAB dipindahkan ke AppBar actions sebagai CTA 'Tambah'
     );
+  }
+
+  List<Widget> _buildGroupedMenus() {
+    final Map<String, List<MenuModel>> grouped = {};
+    for (final menu in _menus) {
+      final key = (menu.category ?? '').trim().isNotEmpty
+          ? menu.category!.trim()
+          : 'Tanpa kategori';
+      grouped.putIfAbsent(key, () => []).add(menu);
+    }
+
+    final categories = grouped.keys.toList()..sort();
+    return [
+      for (int i = 0; i < categories.length; i++) ...[
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, i == 0 ? 8 : 20, 16, 8),
+          child: Text(
+            categories[i],
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ...grouped[categories[i]]!
+            .map(
+              (menu) => Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: ListTile(
+                  onTap: () => _editMenu(menu),
+                  leading: menu.imagePath != null && menu.imagePath!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(menu.imagePath!),
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.fastfood),
+                          ),
+                        )
+                      : const Icon(Icons.fastfood),
+                  title: Text(menu.name),
+                  subtitle: Text("Rp${menu.price}"),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _confirmDelete(menu),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ]
+    ];
   }
 }
